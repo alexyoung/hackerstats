@@ -64,18 +64,18 @@ var Twitter = {
     var url = 'http://twitter.com/users/show/{user}.json?callback={callback}'.interpolate({ user: user });
     glow.net.loadScript(url, {
       onLoad: function(data) {
-        callback(data['followers_count']);
+        callback(data.followers_count);
       }
     });
   }
-}
+};
 
 var GitHub = {
   followers: function(user, callback) {
     var url = 'http://github.com/api/v2/json/user/show/{user}?callback={callback}'.interpolate({ user: user });
     glow.net.loadScript(url, {
       onLoad: function(data) {
-        callback(data['user']['followers_count']);
+        callback(data.user.followers_count);
       }
     });
   },
@@ -85,14 +85,25 @@ var GitHub = {
     glow.net.loadScript(url, {
       onLoad: function(data) {
         var count = 0, i = 0;
-        for (i = 0; i < data['repositories'].length; i++) {
-          count += data['repositories'][i]['fork'] ? 0 : (data['repositories'][i]['watchers'] - 1);
+        for (i = 0; i < data.repositories.length; i++) {
+          count += data.repositories[i].fork ? 0 : (data.repositories[i].watchers - 1);
         }
         callback(count);
       }
     });
   }
-}
+};
+
+var HackerNews = {
+  karma: function(user, callback) {
+    var url = 'http://api.ihackernews.com/profile/{user}?format=jsonp&callback={callback}'.interpolate({ user: user });
+    glow.net.loadScript(url, {
+      onLoad: function(data) {
+        callback(data.karma);
+      }
+    });
+  }
+};
 
 function Profile() {
   this.scores = {};
@@ -113,23 +124,25 @@ Profile.prototype = {
   },
 
   setShare: function() {
-    glow.dom.get('#share-link').attr('href', "#?t={twitter}&g={github}".interpolate({
+    glow.dom.get('#share-link').attr('href', "#?t={twitter}&g={github}&h={hacker_news}".interpolate({
       'twitter': $('#user-twitter').val(),
       'github':  $('#user-github').val(),
+      'hacker_news':  $('#user-hacker_news').val()
     }));
   }
 }
 
 function settingsFromURL() {
-  if (window.location['hash']) {
-    var params = window.location['hash'].split('?')[1].split('&'),
+  if (window.location.hash) {
+    var params = window.location.hash.split('?')[1].split('&'),
         i = 0,
         pair = null;
     for (i = 0; i < params.length; i++) {
       pair = params[i].split('=');
       switch (pair[0]) {
-        case 't': $('#user-twitter').val(pair[1]);
-        case 'g': $('#user-github').val(pair[1]);
+        case 't': $('#user-twitter').val(pair[1]); break;
+        case 'g': $('#user-github').val(pair[1]); break;
+        case 'h': $('#user-hacker_news').val(pair[1]); break;
       }
     }
   }
@@ -137,8 +150,9 @@ function settingsFromURL() {
 
 function search() {
   var user_twitter = $('#user-twitter').val(),
-      user_github  = $('#user-github').val(),
-      profile      = new Profile();
+      user_github = $('#user-github').val(),
+      user_hacker_news = $('#user-hacker_news').val(),
+      profile = new Profile();
 
   profile.setShare();
 
@@ -155,6 +169,11 @@ function search() {
   GitHub.watchers(user_github, function(count) {
     glow.dom.get('#github_watchers').html("" + count);
     profile.addScore('github_watchers', count);
+  });
+
+  HackerNews.karma(user_hacker_news, function(karma) {
+    glow.dom.get('#hacker_news_karma').html("" + karma);
+    profile.addScore('hacker_news_karma', karma);
   });
 }
 
@@ -177,6 +196,8 @@ glow.ready(function() {
           <dd><input type="text" value="alex_young" id="user-twitter" /></dd>
           <dt>GitHub</dt>
           <dd><input type="text" value="alexyoung" id="user-github" /></dd>
+          <dt>Hacker News</dt>
+          <dd><input type="text" value="alexyoung" id="user-hacker_news" /></dd>
           <dt>&nbsp;</dt>
           <dd><input type="submit" value="Show" /> or <a href="" target="_blank" id="share-link">Share</a></dd>
         </dl>
@@ -193,6 +214,9 @@ glow.ready(function() {
 
         <dt>GitHub Watchers</dt>
         <dd id="github_watchers">&nbsp;</dd>
+
+        <dt>Hacker News Karma</dt>
+        <dd id="hacker_news_karma">&nbsp;</dd>
 
         <dt><em>Total Score</em></dt>
         <dd id="total">&nbsp;</dd>
